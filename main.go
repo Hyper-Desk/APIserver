@@ -11,6 +11,7 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/joho/godotenv"
+	"github.com/rs/cors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -69,12 +70,22 @@ func main() {
 	userCollection = client.Database("testdb").Collection("users")
 	tokenCollection = client.Database("testdb").Collection("tokens")
 
-	http.HandleFunc("/api/user/signup", registerHandler)
-	http.HandleFunc("/api/user/login", loginHandler)
-	http.HandleFunc("/api/user/refresh", refreshHandler)
+	// 핸들러 설정
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/user/signup", registerHandler)
+	mux.HandleFunc("/api/user/login", loginHandler)
+	mux.HandleFunc("/api/user/refresh", refreshHandler)
+
+	// CORS 설정
+	corsHandler := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization"},
+		AllowCredentials: true,
+	}).Handler(mux)
 
 	fmt.Println("서버가 포트 8080에서 실행 중입니다...")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":8080", corsHandler))
 }
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {

@@ -5,6 +5,7 @@ go 1.22.3
 require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/joho/godotenv v1.5.1
+	github.com/rs/cors v1.11.0
 	go.mongodb.org/mongo-driver v1.16.0
 )
 

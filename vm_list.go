@@ -156,3 +156,80 @@ func saveVMList(userId string, vmList []VMInfo) error {
 
 	return nil
 }
+
+// Handler function for reserving a VM
+func reserveHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse the access token from the Authorization header
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Authorization header is missing", http.StatusUnauthorized)
+		return
+	}
+
+	authHeaderParts := strings.Split(authHeader, " ")
+	if len(authHeaderParts) != 2 || authHeaderParts[0] != "Bearer" {
+		http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+		return
+	}
+
+	accessToken := authHeaderParts[1]
+
+	// Validate the access token and extract user ID
+	claims := &TokenClaims{}
+	token, err := jwt.ParseWithClaims(accessToken, claims, func(token *jwt.Token) (interface{}, error) {
+		return tokenSecretKey, nil
+	})
+
+	if err != nil || !token.Valid {
+		http.Error(w, "Invalid access token", http.StatusUnauthorized)
+		return
+	}
+
+	userId := claims.UserId
+
+	// Parse the request body for VM ID to be reserved
+	var params struct {
+		VMID string `json:"vmId"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
+		http.Error(w, "Failed to decode request body", http.StatusBadRequest)
+		return
+	}
+
+	vmID := params.VMID
+
+	// Perform the reservation
+	err = reserveVM(userId, vmID)
+	if err != nil {
+		log.Printf("Failed to reserve VM: %v", err)
+		http.Error(w, "Failed to reserve VM", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("VM reserved successfully"))
+}
+
+// reserveVM performs the reservation of the VM for the specified user
+func reserveVM(userId, vmId string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Update the VM document to set the reservedBy field
+	filter := bson.M{"userId": userId, "id": vmId}
+	update := bson.M{
+		"$set": bson.M{"reservedBy": userId},
+	}
+
+	_, err := vmCollection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return fmt.Errorf("failed to reserve VM: %v", err)
+	}
+
+	return nil
+}

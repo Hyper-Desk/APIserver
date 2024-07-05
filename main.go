@@ -96,9 +96,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 
 	var user User
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		fmt.Println(user)
-		fmt.Println(r.Body)
-		fmt.Println(err)
+		fmt.Println(json.NewDecoder(r.Body))
 		http.Error(w, "잘못된 요청입니다.", http.StatusBadRequest)
 		return
 	}

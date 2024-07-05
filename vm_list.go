@@ -298,7 +298,7 @@ func getVMsByOwnerAndClient(userId string) ([]VMInfo, error) {
 
 	filter := bson.M{
 		"$or": []bson.M{
-			{"ownerId": userId},
+			{"userId": userId},
 			{"clientId": userId},
 		},
 	}

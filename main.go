@@ -94,12 +94,14 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user := new(User)
-	if err := json.NewDecoder(r.Body).Decode(user); err != nil {
-		fmt.Println(user)
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		http.Error(w, "잘못된 요청입니다.", http.StatusBadRequest)
 		return
 	}
+
+	var user User
+	user.UserId = r.FormValue("userId")
+	user.Password = r.FormValue("password")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

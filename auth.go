@@ -116,7 +116,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{"accessToken": accessToken, "refreshToken": refreshToken})
+	json.NewEncoder(w).Encode(map[string]string{"userId": user.UserId, "accessToken": accessToken, "refreshToken": refreshToken})
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
@@ -169,7 +169,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"accessToken": accessToken, "refreshToken": refreshToken})
+	json.NewEncoder(w).Encode(map[string]string{"userId": user.UserId, "accessToken": accessToken, "refreshToken": refreshToken})
 }
 
 func refreshHandler(w http.ResponseWriter, r *http.Request) {

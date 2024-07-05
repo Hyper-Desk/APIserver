@@ -47,14 +47,14 @@ func init() {
 	// Initialize MongoDB client
 	mongoURI := os.Getenv("MONGO_URI")
 
-	if err != nil {
-		log.Fatalf("Error creating MongoDB client: %v", err)
-	}
+	// Set up client options
+	clientOptions := options.Client().ApplyURI(mongoURI)
 
+	// Connect to MongoDB
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	client, err = mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
+	client, err = mongo.Connect(ctx, clientOptions)
 	if err != nil {
 		log.Fatalf("Error connecting to MongoDB: %v", err)
 	}

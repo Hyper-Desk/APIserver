@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -33,13 +35,26 @@ var (
 )
 
 func init() {
-	// MongoDB 클라이언트 초기화
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	// Initialize MongoDB client
 	mongoURI := os.Getenv("MONGO_URI")
 
+	// Set up client options
+	clientOptions := options.Client().ApplyURI(mongoURI)
+
+	// Connect to MongoDB
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	client, _ := mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
+	client, err = mongo.Connect(ctx, clientOptions)
+	if err != nil {
+		log.Fatalf("Error connecting to MongoDB: %v", err)
+	}
+
 	client.Ping(ctx, readpref.Primary())
 
 	// 데이터베이스와 컬렉션 설정

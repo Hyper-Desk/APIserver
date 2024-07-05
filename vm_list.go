@@ -20,9 +20,22 @@ import (
 
 // VMInfo represents information about a VM or CT
 type VMInfo struct {
-	ID     string `json:"id" bson:"id"`
-	Name   string `json:"name" bson:"name"`
-	Status string `json:"status" bson:"status"`
+	UserID  string  `json:"userId" bson:"userId"`
+	Name    string  `json:"name" bson:"name"`
+	VMID    int     `json:"vmid" bson:"vmid"`
+	Type    string  `json:"type" bson:"type"`
+	Status  string  `json:"status" bson:"status"`
+	CPU     float64 `json:"cpu" bson:"cpu"`
+	MaxCPU  int     `json:"maxcpu" bson:"maxcpu"`
+	Mem     float64 `json:"mem" bson:"mem"`         // Mem in GB
+	MaxMem  float64 `json:"maxmem" bson:"maxmem"`   // MaxMem in GB
+	Disk    float64 `json:"disk" bson:"disk"`       // Disk in TB
+	MaxDisk float64 `json:"maxdisk" bson:"maxdisk"` // MaxDisk in TB
+}
+
+type Response struct {
+	UserId string   `json:"userId"`
+	Vms    []VMInfo `json:"vms"`
 }
 
 // TokenClaims represents JWT claims
@@ -78,43 +91,15 @@ func vmListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse the access token from the Authorization header
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
-		http.Error(w, "Authorization header is missing", http.StatusUnauthorized)
-		return
-	}
-
-	authHeaderParts := strings.Split(authHeader, " ")
-	if len(authHeaderParts) != 2 || authHeaderParts[0] != "Bearer" {
-		http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
-		return
-	}
-
-	accessToken := authHeaderParts[1]
-
-	// Validate the access token and extract user ID
-	claims := &TokenClaims{}
-	token, err := jwt.ParseWithClaims(accessToken, claims, func(token *jwt.Token) (interface{}, error) {
-		return tokenSecretKey, nil
-	})
-
-	if err != nil || !token.Valid {
-		http.Error(w, "Invalid access token", http.StatusUnauthorized)
-		return
-	}
-
-	userId := claims.UserId
-
 	// Decode the request body into a slice of VMInfo structs
-	var vmList []VMInfo
-	if err := json.NewDecoder(r.Body).Decode(&vmList); err != nil {
+	var response Response
+	if err := json.NewDecoder(r.Body).Decode(&response); err != nil {
 		http.Error(w, "Failed to decode request body", http.StatusBadRequest)
 		return
 	}
 
 	// Save VM list to MongoDB for the specific user
-	err = saveVMList(userId, vmList)
+	err := saveVMList(response.UserId, response.Vms)
 	if err != nil {
 		log.Printf("Failed to save VM list to MongoDB: %v", err)
 		http.Error(w, "Failed to save VM list", http.StatusInternalServerError)
@@ -141,10 +126,17 @@ func saveVMList(userId string, vmList []VMInfo) error {
 	var documents []interface{}
 	for _, vm := range vmList {
 		vmDoc := bson.M{
-			"userId": userId,
-			"id":     vm.ID,
-			"name":   vm.Name,
-			"status": vm.Status,
+			"userId":  userId,
+			"vmid":    vm.VMID,
+			"name":    vm.Name,
+			"type":    vm.Type,
+			"status":  vm.Status,
+			"cpu":     vm.CPU,
+			"maxcpu":  vm.MaxCPU,
+			"mem":     vm.Mem,
+			"maxmem":  vm.MaxMem,
+			"disk":    vm.Disk,
+			"maxdisk": vm.MaxDisk,
 		}
 		documents = append(documents, vmDoc)
 	}
@@ -238,7 +230,7 @@ func reserveVM(ownerID, userId, vmId string) error {
 }
 
 func clientVmListHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
+	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}

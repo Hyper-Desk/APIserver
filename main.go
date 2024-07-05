@@ -21,8 +21,8 @@ func main() {
 	mux.HandleFunc("/api/user/signup", registerHandler)
 	mux.HandleFunc("/api/user/login", loginHandler)
 	mux.HandleFunc("/api/user/refresh", refreshHandler)
-	mux.HandleFunc("/api/user/vm_list", vmListHandler)
-	mux.HandleFunc("/api/vm/list", clientVmListHandler)
+	mux.HandleFunc("/api/vm/list", vmListHandler)
+	mux.HandleFunc("/api/user/vm_list", clientVmListHandler)
 	mux.HandleFunc("/api/user/reserve", reserveHandler)
 
 	// CORS 설정

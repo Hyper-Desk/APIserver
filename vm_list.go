@@ -194,17 +194,20 @@ func reserveHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Parse the request body for VM ID to be reserved
 	var params struct {
-		VMID string `json:"vmId"`
+		OwnerID string `json:"ownerID"`
+		VMID    string `json:"vmId"`
 	}
+
 	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
 		http.Error(w, "Failed to decode request body", http.StatusBadRequest)
 		return
 	}
 
 	vmID := params.VMID
+	ownerID := params.OwnerID
 
 	// Perform the reservation
-	err = reserveVM(userId, vmID)
+	err = reserveVM(ownerID, userId, vmID)
 	if err != nil {
 		log.Printf("Failed to reserve VM: %v", err)
 		http.Error(w, "Failed to reserve VM", http.StatusInternalServerError)
@@ -216,14 +219,14 @@ func reserveHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // reserveVM performs the reservation of the VM for the specified user
-func reserveVM(userId, vmId string) error {
+func reserveVM(ownerID, userId, vmId string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	// Update the VM document to set the reservedBy field
-	filter := bson.M{"userId": userId, "id": vmId}
+	filter := bson.M{"userId": ownerID, "id": vmId}
 	update := bson.M{
-		"$set": bson.M{"reservedBy": userId},
+		"$set": bson.M{"client": userId},
 	}
 
 	_, err := vmCollection.UpdateOne(ctx, filter, update)

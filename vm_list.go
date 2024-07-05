@@ -226,7 +226,7 @@ func reserveVM(ownerID, userId, vmId string) error {
 	// Update the VM document to set the reservedBy field
 	filter := bson.M{"userId": ownerID, "id": vmId}
 	update := bson.M{
-		"$set": bson.M{"client": userId},
+		"$set": bson.M{"clientId": userId},
 	}
 
 	_, err := vmCollection.UpdateOne(ctx, filter, update)
@@ -235,4 +235,92 @@ func reserveVM(ownerID, userId, vmId string) error {
 	}
 
 	return nil
+}
+
+func clientVmListHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse the access token from the Authorization header
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Authorization header is missing", http.StatusUnauthorized)
+		return
+	}
+
+	authHeaderParts := strings.Split(authHeader, " ")
+	if len(authHeaderParts) != 2 || authHeaderParts[0] != "Bearer" {
+		http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+		return
+	}
+
+	accessToken := authHeaderParts[1]
+
+	// Validate the access token and extract user ID
+	claims := &TokenClaims{}
+	token, err := jwt.ParseWithClaims(accessToken, claims, func(token *jwt.Token) (interface{}, error) {
+		return tokenSecretKey, nil
+	})
+
+	if err != nil || !token.Valid {
+		http.Error(w, "Invalid access token", http.StatusUnauthorized)
+		return
+	}
+
+	userId := claims.UserId
+
+	// Fetch VM list from MongoDB based on ownerId and clientId
+	vmList, err := getVMsByOwnerAndClient(userId)
+	if err != nil {
+		log.Printf("Failed to fetch VM list from MongoDB: %v", err)
+		http.Error(w, "Failed to fetch VM list", http.StatusInternalServerError)
+		return
+	}
+
+	// Respond with VM list
+	jsonBytes, err := json.Marshal(vmList)
+	if err != nil {
+		http.Error(w, "Failed to marshal VM list", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonBytes)
+}
+
+// getVMsByOwnerAndClient fetches VMs from MongoDB based on ownerId and clientId
+func getVMsByOwnerAndClient(userId string) ([]VMInfo, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	filter := bson.M{
+		"$or": []bson.M{
+			{"ownerId": userId},
+			{"clientId": userId},
+		},
+	}
+
+	cursor, err := vmCollection.Find(ctx, filter)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find VM documents: %v", err)
+	}
+	defer cursor.Close(ctx)
+
+	var vmList []VMInfo
+	for cursor.Next(ctx) {
+		var vm VMInfo
+		if err := cursor.Decode(&vm); err != nil {
+			return nil, fmt.Errorf("failed to decode VM document: %v", err)
+		}
+		vmList = append(vmList, vm)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, fmt.Errorf("cursor error: %v", err)
+	}
+
+	return vmList, nil
 }

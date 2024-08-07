@@ -16,8 +16,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
-var jwtKey = []byte("my_secret_key")
-
 type User struct {
 	UserId   string `json:"userId" bson:"userId"`
 	Password string `json:"password" bson:"password"`
@@ -32,6 +30,7 @@ type Token struct {
 var (
 	userCollection  *mongo.Collection
 	tokenCollection *mongo.Collection
+	jwtKey          []byte
 )
 
 func init() {
@@ -42,6 +41,7 @@ func init() {
 
 	// Initialize MongoDB client
 	mongoURI := os.Getenv("MONGO_URI")
+	jwtKey = []byte(os.Getenv("TOKEN_SECRET"))
 
 	// Set up client options
 	clientOptions := options.Client().ApplyURI(mongoURI)
@@ -68,14 +68,11 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := r.ParseMultipartForm(10 << 20); err != nil {
+	var user User
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		http.Error(w, "잘못된 요청입니다.", http.StatusBadRequest)
 		return
 	}
-
-	var user User
-	user.UserId = r.FormValue("userId")
-	user.Password = r.FormValue("password")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

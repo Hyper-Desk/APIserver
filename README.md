@@ -10,5 +10,5 @@ MONGO_URI=mongodb://localhost:27017
 <br/>
 
 # Contributers
-eogns47
+eogns47 <br/>
 choish20

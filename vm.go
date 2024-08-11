@@ -19,9 +19,14 @@ import (
 
 // VM 구조체 정의
 type VM struct {
-	VMId   string `json:"vmId" bson:"vmId"`
-	Status string `json:"status" bson:"status"`
-	UserId string `json:"userId" bson:"userId"`
+	Status   string `json:"status" bson:"status"`
+	UserId   string `json:"userId" bson:"userId"`
+	CPU      int    `json:"cpu" bson:"cpu"`
+	MaxDisk  int64  `json:"maxdisk" bson:"maxdisk"`
+	MaxMem   int64  `json:"maxmem" bson:"maxmem"`
+	Name     string `json:"name" bson:"name"`
+	VMId     string `json:"vmid" bson:"vmid"`
+	UniqueId string `json:"uniqueId" bson:"uniqueId"`
 }
 
 var (
@@ -146,8 +151,12 @@ func registerVMHandler(c *gin.Context) {
 		return
 	}
 
+	// VM의 상태와 사용자 ID 설정
 	vm.Status = "available"
 	vm.UserId = claims.UserId
+
+	// Unique ID 생성 및 할당
+	vm.UniqueId = generateUniqueId(vm.VMId, vm.Name, vm.UserId, int(vm.MaxDisk), int(vm.MaxMem), vm.CPU)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -158,5 +167,5 @@ func registerVMHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "VM registered successfully"})
+	c.JSON(http.StatusCreated, gin.H{"message": "VM registered successfully", "uniqueId": vm.UniqueId})
 }

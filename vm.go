@@ -103,7 +103,7 @@ func rentVMHandler(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	filter := bson.M{"vmId": req.VMId, "status": "available"}
+	filter := bson.M{"vmid": req.VMId, "status": "available"}
 	update := bson.M{"$set": bson.M{"status": "rented", "userId": req.UserId}}
 
 	result, err := vmCollection.UpdateOne(ctx, filter, update)

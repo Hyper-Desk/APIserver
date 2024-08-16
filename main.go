@@ -20,11 +20,15 @@ func main() {
 	// CORS 설정
 	r.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 
 		c.Next()
+	})
+
+	r.OPTIONS("/*wildcard", func(c *gin.Context) {
+		c.Status(200)
 	})
 
 	// 핸들러 정의

@@ -98,7 +98,7 @@ func registerHandler(c *gin.Context) {
 		return
 	}
 
-	accessToken, err := generateJWT(user.UserId, time.Minute*15)
+	accessToken, err := generateJWT(user.UserId, time.Minute*30)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "액세스 토큰 생성 실패"})
 		return
@@ -116,7 +116,22 @@ func registerHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"userId": user.UserId, "accessToken": accessToken, "refreshToken": refreshToken})
+	c.SetSameSite(http.SameSiteNoneMode)
+	// Refresh Token을 HttpOnly 쿠키로 설정
+	c.SetCookie(
+		"refreshToken",
+		refreshToken,
+		int(time.Hour*24*7/time.Second), // 쿠키 만료 시간을 7일로 설정
+		"/",
+		"",   // 도메인 설정 (기본: 현재 도메인)
+		true, // HTTPS 설정 여부 (true로 설정하면 HTTPS에서만 전송)
+		true, // HttpOnly 설정 (JavaScript에서 접근 불가)
+	)
+
+	c.JSON(http.StatusCreated, gin.H{
+		"userId":      user.UserId,
+		"accessToken": accessToken,
+	})
 }
 
 func loginHandler(c *gin.Context) {
@@ -145,7 +160,7 @@ func loginHandler(c *gin.Context) {
 		return
 	}
 
-	accessToken, err := generateJWT(user.UserId, time.Minute*15)
+	accessToken, err := generateJWT(user.UserId, time.Minute*30)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "액세스 토큰 생성 실패"})
 		return
@@ -170,7 +185,22 @@ func loginHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"userId": user.UserId, "accessToken": accessToken, "refreshToken": refreshToken})
+	c.SetSameSite(http.SameSiteNoneMode)
+	// Refresh Token을 HttpOnly 쿠키로 설정
+	c.SetCookie(
+		"refreshToken",
+		refreshToken,
+		int(time.Hour*24*7/time.Second), // 쿠키 만료 시간을 7일로 설정
+		"/",
+		"",   // 도메인 설정 (기본: 현재 도메인)
+		true, // HTTPS 설정 여부 (true로 설정하면 HTTPS에서만 전송)
+		true, // HttpOnly 설정 (JavaScript에서 접근 불가)
+	)
+
+	c.JSON(http.StatusCreated, gin.H{
+		"userId":      user.UserId,
+		"accessToken": accessToken,
+	})
 }
 
 func refreshHandler(c *gin.Context) {

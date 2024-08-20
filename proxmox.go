@@ -368,7 +368,7 @@ func getProxmoxToken(creds ProxmoxCredentials) (string, string, error) {
 	}
 	client := &http.Client{
 		Transport: tr,
-		Timeout:   time.Second,
+		Timeout:   5 * time.Second,
 	}
 	resp, err := client.Do(req)
 	if err != nil {

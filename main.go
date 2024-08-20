@@ -48,7 +48,7 @@ func main() {
 		proxyHandler(c)
 	})
 
-	r.POST("/api/proxmox/vm/", func(c *gin.Context) {
+	r.POST("/api/proxmox/vm", func(c *gin.Context) {
 		proxmoxVMListHandler(c)
 	})
 

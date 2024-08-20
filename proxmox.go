@@ -214,8 +214,8 @@ func fetchNodeVMsAndCTs(creds ProxmoxCredentials, node string, userId string) (m
 }
 
 // generateUniqueId generates a unique ID based on VM/CT properties.
-func generateUniqueId(vmid, name, userid string, maxdisk, maxmem, cpu int) string {
-	data := fmt.Sprintf("%s:%s:%s:%d:%d:%d", vmid, name, userid, maxdisk, maxmem, cpu)
+func generateUniqueId(vmid, name, userid string, maxdisk string, maxmem string, cpu int) string {
+	data := fmt.Sprintf("%s:%s:%s:%s:%s:%d", vmid, name, userid, maxdisk, maxmem, cpu)
 	hash := sha256.Sum256([]byte(data))
 	return hex.EncodeToString(hash[:])
 }
@@ -233,13 +233,28 @@ func processVMData(data interface{}, userId string) ([]interface{}, []string) {
 
 		vmid := fmt.Sprintf("%v", vmMap["vmid"]) // Convert vmid to string if it's not
 		name := vmMap["name"].(string)
-		maxdisk := int(vmMap["maxdisk"].(float64) / (1024 * 1024 * 1024)) // GB
+
+		// 소수점 둘째 자리까지 표시
+		diskread := fmt.Sprintf("%.2f", vmMap["diskread"].(float64)/(1024*1024*1024)) // GB
+		vmMap["diskread"] = diskread
+
+		diskwrite := fmt.Sprintf("%.2f", vmMap["diskwrite"].(float64)/(1024*1024*1024)) // GB
+		vmMap["diskwrite"] = diskwrite
+
+		disk := fmt.Sprintf("%.2f", vmMap["disk"].(float64)/(1024*1024*1024)) // GB
+		vmMap["disk"] = disk
+
+		maxdisk := fmt.Sprintf("%.2f", vmMap["maxdisk"].(float64)/(1024*1024*1024)) // GB
 		vmMap["maxdisk"] = maxdisk
-		maxmem := int(vmMap["maxmem"].(float64) / (1024 * 1024)) // MB
+
+		maxmem := fmt.Sprintf("%.2f", vmMap["maxmem"].(float64)/(1024*1024)) // MB
 		vmMap["maxmem"] = maxmem
-		mem := int(vmMap["mem"].(float64) / (1024 * 1024)) // MB
+
+		mem := fmt.Sprintf("%.2f", vmMap["mem"].(float64)/(1024*1024)) // MB
 		vmMap["mem"] = mem
+
 		cpu := int(vmMap["cpus"].(float64))
+		vmMap["cpus"] = cpu
 
 		uniqueId := generateUniqueId(vmid, name, userId, maxdisk, maxmem, cpu)
 		vmMap["uniqueId"] = uniqueId

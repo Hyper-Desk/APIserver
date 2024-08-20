@@ -22,8 +22,8 @@ type VM struct {
 	Status   string `json:"status" bson:"status"`
 	UserId   string `json:"userId" bson:"userId"`
 	CPU      int    `json:"cpu" bson:"cpu"`
-	MaxDisk  int64  `json:"maxdisk" bson:"maxdisk"`
-	MaxMem   int64  `json:"maxmem" bson:"maxmem"`
+	MaxDisk  string `json:"maxdisk" bson:"maxdisk"`
+	MaxMem   string `json:"maxmem" bson:"maxmem"`
 	Name     string `json:"name" bson:"name"`
 	VMId     string `json:"vmid" bson:"vmid"`
 	UniqueId string `json:"uniqueId" bson:"uniqueId"`
@@ -156,7 +156,7 @@ func registerVMHandler(c *gin.Context) {
 	vm.UserId = claims.UserId
 
 	// Unique ID 생성 및 할당
-	vm.UniqueId = generateUniqueId(vm.VMId, vm.Name, vm.UserId, int(vm.MaxDisk), int(vm.MaxMem), vm.CPU)
+	vm.UniqueId = generateUniqueId(vm.VMId, vm.Name, vm.UserId, vm.MaxDisk, vm.MaxMem, vm.CPU)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

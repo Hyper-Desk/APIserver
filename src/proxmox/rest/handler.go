@@ -1,4 +1,4 @@
-package main
+package rest
 
 import (
 	"context"
@@ -10,30 +10,50 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
+	proxmoxdb "hyperdesk/proxmox/dblayer"
+	"hyperdesk/proxmox/models"
+	vmdb "hyperdesk/vm/dblayer"
+
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
+	"github.com/go-errors/errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type ProxmoxCredentials struct {
-	Address  string `json:"address" bson:"address"`
-	Port     string `json:"port" bson:"port"`
-	UserId   string `json:"userId" bson:"userId"`
-	Password string `json:"password" bson:"password"`
+type Handler struct {
+	proxmoxdbLayer proxmoxdb.DBLayer
+	vmdbLayer      vmdb.DBLayer
+	jwtKey         []byte
 }
 
-type TokenClaims struct {
-	UserId string `json:"userId"`
-	jwt.StandardClaims
+// NewHandler는 새로운 핸들러를 생성합니다.
+func NewHandler() (*Handler, error) {
+	proxmoxdbLayer, err := proxmoxdb.NewORM()
+	if err != nil {
+		return nil, errors.WrapPrefix(err, "Failed to create a new proxmox ORM", 1)
+	}
+
+	vmdbLayer, err := vmdb.NewORM()
+	if err != nil {
+		return nil, errors.WrapPrefix(err, "Failed to create a new vm ORM", 1)
+	}
+
+	jwtKey := []byte(os.Getenv("TOKEN_SECRET"))
+
+	return &Handler{
+		proxmoxdbLayer: proxmoxdbLayer,
+		vmdbLayer:      vmdbLayer,
+		jwtKey:         jwtKey,
+	}, nil
 }
 
-func proxmoxVMListHandler(c *gin.Context) {
-	// JWT 토큰에서 userId 추출
+// ProxmoxVMListHandler는 Proxmox에서 VM 리스트를 가져옵니다.
+func (h *Handler) ProxmoxVMListHandler(c *gin.Context) {
 	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "토큰이 제공되지 않았습니다."})
@@ -47,10 +67,9 @@ func proxmoxVMListHandler(c *gin.Context) {
 	}
 
 	accessToken := authHeaderParts[1]
-
-	claims := &TokenClaims{}
+	claims := &models.TokenClaims{}
 	token, err := jwt.ParseWithClaims(accessToken, claims, func(token *jwt.Token) (interface{}, error) {
-		return jwtKey, nil
+		return h.jwtKey, nil
 	})
 
 	if err != nil || !token.Valid {
@@ -60,33 +79,19 @@ func proxmoxVMListHandler(c *gin.Context) {
 
 	userId := claims.UserId
 
-	// 요청에서 Proxmox 자격 증명 받기
-	var creds ProxmoxCredentials
+	var creds models.ProxmoxCredentials
 	if err := c.BindJSON(&creds); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "잘못된 요청입니다."})
 		return
 	}
 
-	// Proxy 정보 저장
-	proxy := Proxy{
+	proxy := models.Proxy{
 		UserId:  userId,
 		Address: creds.Address,
 		Port:    creds.Port,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	opts := options.Update().SetUpsert(true)
-	filter := bson.M{"userId": proxy.UserId}
-	update := bson.M{
-		"$set": bson.M{
-			"address": proxy.Address,
-			"port":    proxy.Port,
-		},
-	}
-
-	_, err = proxyCollection.UpdateOne(ctx, filter, update, opts)
+	_, err = h.proxmoxdbLayer.InsertProxy(proxy)
 	if err != nil {
 		log.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "프록시 정보 저장 실패"})
@@ -94,7 +99,7 @@ func proxmoxVMListHandler(c *gin.Context) {
 	}
 
 	// Proxmox API를 통해 VM/CT 정보 가져오기
-	vmInfo, err := fetchProxmoxData(creds, userId)
+	vmInfo, err := fetchProxmoxData(creds, userId, h)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Proxmox VM 정보 가져오기 실패"})
 		return
@@ -104,7 +109,7 @@ func proxmoxVMListHandler(c *gin.Context) {
 }
 
 // fetchProxmoxData fetches all VM and CT information from Proxmox.
-func fetchProxmoxData(creds ProxmoxCredentials, userId string) (map[string]interface{}, error) {
+func fetchProxmoxData(creds models.ProxmoxCredentials, userId string, h *Handler) (map[string]interface{}, error) {
 	nodes, err := fetchProxmoxNodes(creds)
 	if err != nil {
 		return nil, err
@@ -112,7 +117,7 @@ func fetchProxmoxData(creds ProxmoxCredentials, userId string) (map[string]inter
 
 	allData := make(map[string]interface{})
 	for _, node := range nodes {
-		nodeData, err := fetchNodeVMsAndCTs(creds, node, userId)
+		nodeData, err := fetchNodeVMsAndCTs(creds, node, userId, h)
 		if err != nil {
 			log.Printf("Failed to fetch data for node %s: %v", node, err)
 			continue
@@ -124,7 +129,7 @@ func fetchProxmoxData(creds ProxmoxCredentials, userId string) (map[string]inter
 }
 
 // fetchProxmoxNodes fetches the list of nodes from Proxmox.
-func fetchProxmoxNodes(creds ProxmoxCredentials) ([]string, error) {
+func fetchProxmoxNodes(creds models.ProxmoxCredentials) ([]string, error) {
 	url := fmt.Sprintf("https://%s:%s/api2/json/nodes/", creds.Address, creds.Port)
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -185,7 +190,7 @@ func fetchProxmoxNodes(creds ProxmoxCredentials) ([]string, error) {
 }
 
 // fetchNodeVMsAndCTs fetches VM and CT information for a given node.
-func fetchNodeVMsAndCTs(creds ProxmoxCredentials, node string, userId string) (map[string]interface{}, error) {
+func fetchNodeVMsAndCTs(creds models.ProxmoxCredentials, node string, userId string, h *Handler) (map[string]interface{}, error) {
 	vmURL := fmt.Sprintf("https://%s:%s/api2/json/nodes/%s/qemu", creds.Address, creds.Port, node)
 	ctURL := fmt.Sprintf("https://%s:%s/api2/json/nodes/%s/lxc", creds.Address, creds.Port, node)
 
@@ -199,11 +204,11 @@ func fetchNodeVMsAndCTs(creds ProxmoxCredentials, node string, userId string) (m
 		return nil, err
 	}
 
-	processedVMs, vmUniqueIds := processVMData(vmData, userId)
-	processedCTs, ctUniqueIds := processVMData(ctData, userId)
+	processedVMs, vmUniqueIds := processVMData(vmData, userId, h)
+	processedCTs, ctUniqueIds := processVMData(ctData, userId, h)
 
 	allUniqueIds := append(vmUniqueIds, ctUniqueIds...)
-	deleteAbsentsVMs(allUniqueIds, userId)
+	deleteAbsentsVMs(allUniqueIds, userId, h)
 
 	allData := map[string]interface{}{
 		"vms": processedVMs,
@@ -213,15 +218,15 @@ func fetchNodeVMsAndCTs(creds ProxmoxCredentials, node string, userId string) (m
 	return allData, nil
 }
 
-// generateUniqueId generates a unique ID based on VM/CT properties.
-func generateUniqueId(vmid, name, userid string, maxdisk string, maxmem string, cpu int) string {
+// GenerateUniqueId generates a unique ID based on VM/CT properties.
+func GenerateUniqueId(vmid, name, userid string, maxdisk string, maxmem string, cpu int) string {
 	data := fmt.Sprintf("%s:%s:%s:%s:%s:%d", vmid, name, userid, maxdisk, maxmem, cpu)
 	hash := sha256.Sum256([]byte(data))
 	return hex.EncodeToString(hash[:])
 }
 
 // processVMData processes the VM/CT data and checks if it's already registered.
-func processVMData(data interface{}, userId string) ([]interface{}, []string) {
+func processVMData(data interface{}, userId string, h *Handler) ([]interface{}, []string) {
 	processed := []interface{}{}
 	uniqueIds := []string{}
 
@@ -256,16 +261,14 @@ func processVMData(data interface{}, userId string) ([]interface{}, []string) {
 		cpu := int(vmMap["cpus"].(float64))
 		vmMap["cpus"] = cpu
 
-		uniqueId := generateUniqueId(vmid, name, userId, maxdisk, maxmem, cpu)
+		uniqueId := GenerateUniqueId(vmid, name, userId, maxdisk, maxmem, cpu)
 		vmMap["uniqueId"] = uniqueId
 
 		// Add the uniqueId to the list
 		uniqueIds = append(uniqueIds, uniqueId)
 
 		// Check if this VM/CT is already registered
-		filter := bson.M{"uniqueId": uniqueId}
-		var existingVM VM
-		err := vmCollection.FindOne(context.Background(), filter).Decode(&existingVM)
+		_, err := h.vmdbLayer.FindVMByUniqueId(uniqueId)
 
 		if err == mongo.ErrNoDocuments {
 			// VM is not yet registered
@@ -285,13 +288,12 @@ func processVMData(data interface{}, userId string) ([]interface{}, []string) {
 }
 
 // deleteAbsentsVMs deletes VMs from the collection that are no longer present in the Proxmox API response.
-func deleteAbsentsVMs(fetchedUniqueIds []string, userId string) {
+func deleteAbsentsVMs(fetchedUniqueIds []string, userId string, h *Handler) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	// Fetch all VMs for the userId
-	filter := bson.M{"userId": userId}
-	cursor, err := vmCollection.Find(ctx, filter)
+	cursor, err := h.vmdbLayer.FindVMByUserId(userId)
 	if err != nil {
 		log.Printf("Error fetching VMs from database: %v", err)
 		return
@@ -300,7 +302,7 @@ func deleteAbsentsVMs(fetchedUniqueIds []string, userId string) {
 
 	existingVMs := make(map[string]string)
 	for cursor.Next(ctx) {
-		var vm VM
+		var vm models.VM
 		if err := cursor.Decode(&vm); err != nil {
 			log.Printf("Error decoding VM from database: %v", err)
 			continue
@@ -317,7 +319,7 @@ func deleteAbsentsVMs(fetchedUniqueIds []string, userId string) {
 	// Delete VMs that are no longer present
 	for uniqueId, vmId := range existingVMs {
 		if !fetchedUniqueIdSet[uniqueId] {
-			_, err := vmCollection.DeleteOne(ctx, bson.M{"uniqueId": uniqueId, "userId": userId})
+			err := h.vmdbLayer.DeleteVM(ctx, bson.M{"uniqueId": uniqueId, "userId": userId})
 			if err != nil {
 				log.Printf("Error deleting absent VM from database: %v", err)
 			} else {
@@ -327,8 +329,8 @@ func deleteAbsentsVMs(fetchedUniqueIds []string, userId string) {
 	}
 }
 
-// fetchProxmoxDataForURL fetches data from a specific URL on the Proxmox server.
-func fetchProxmoxDataForURL(creds ProxmoxCredentials, url string) (interface{}, error) {
+// fetchProxmoxDataForURL fetches data from a specific URL.
+func fetchProxmoxDataForURL(creds models.ProxmoxCredentials, url string) ([]interface{}, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -365,11 +367,15 @@ func fetchProxmoxDataForURL(creds ProxmoxCredentials, url string) (interface{}, 
 		return nil, err
 	}
 
-	return result["data"], nil
+	data, ok := result["data"].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("unexpected format for data")
+	}
+
+	return data, nil
 }
 
-// getProxmoxToken gets an API token from the Proxmox server.
-func getProxmoxToken(creds ProxmoxCredentials) (string, string, error) {
+func getProxmoxToken(creds models.ProxmoxCredentials) (string, string, error) {
 	url := fmt.Sprintf("https://%s:%s/api2/json/access/ticket", creds.Address, creds.Port)
 	data := fmt.Sprintf("username=%s&password=%s", creds.UserId+"@pam", creds.Password)
 	req, err := http.NewRequest("POST", url, strings.NewReader(data))
@@ -410,4 +416,46 @@ func getProxmoxToken(creds ProxmoxCredentials) (string, string, error) {
 	csrfToken := result.Data.CSRFPreventionToken
 
 	return token, csrfToken, nil
+}
+
+func (h *Handler) ProxyHandler(c *gin.Context) {
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "토큰이 제공되지 않았습니다."})
+		return
+	}
+
+	authHeaderParts := strings.Split(authHeader, " ")
+	if len(authHeaderParts) != 2 || authHeaderParts[0] != "Bearer" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "잘못된 토큰 형식입니다."})
+		return
+	}
+
+	accessToken := authHeaderParts[1]
+
+	claims := &models.TokenClaims{}
+	token, err := jwt.ParseWithClaims(accessToken, claims, func(token *jwt.Token) (interface{}, error) {
+		return h.jwtKey, nil
+	})
+
+	if err != nil || !token.Valid {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "잘못된 액세스 토큰입니다."})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var result models.Proxy
+	err = h.proxmoxdbLayer.FindProxyByUserId(ctx, claims.UserId, &result)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusNotFound, gin.H{"error": "프록시 정보를 찾을 수 없습니다."})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "서버 오류입니다."})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
 }

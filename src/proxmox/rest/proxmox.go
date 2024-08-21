@@ -1,0 +1,17 @@
+package rest
+
+import (
+	"log"
+
+	"github.com/gin-gonic/gin"
+)
+
+func ProxmoxRoutes(proxmox *gin.RouterGroup) {
+	h, err := NewHandler()
+	if err != nil {
+		log.Printf("Failed to create handler: %v", err)
+		return
+	}
+	proxmox.POST("/vm", h.ProxmoxVMListHandler)
+	proxmox.GET("/proxy", h.ProxyHandler)
+}

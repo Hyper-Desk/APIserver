@@ -170,16 +170,14 @@ func (h *Handler) LoginHandler(c *gin.Context) {
 }
 
 func (h *Handler) RefreshHandler(c *gin.Context) {
-	var req struct {
-		RefreshToken string `json:"refreshToken"`
-	}
-	if err := c.BindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "잘못된 요청입니다."})
+	refreshToken, err := c.Cookie("refreshToken")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "리프레시 토큰이 없습니다."})
 		return
 	}
 
 	claims := &models.TokenClaims{}
-	token, err := jwt.ParseWithClaims(req.RefreshToken, claims, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(refreshToken, claims, func(token *jwt.Token) (interface{}, error) {
 		return h.jwtKey, nil
 	})
 
@@ -194,7 +192,7 @@ func (h *Handler) RefreshHandler(c *gin.Context) {
 		return
 	}
 
-	if result.RefreshToken != req.RefreshToken {
+	if result.RefreshToken != refreshToken {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "리프레시 토큰이 일치하지 않습니다."})
 		return
 	}

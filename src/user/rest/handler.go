@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-errors/errors"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type Handler struct {
@@ -53,14 +54,24 @@ func (h *Handler) RegisterHandler(c *gin.Context) {
 		return
 	}
 
-	_, err := h.dbLayer.InsertUser(user)
+	_, err := h.dbLayer.FindUserById(user.UserId)
+	if err != nil {
+		if err != mongo.ErrNoDocuments {
+			log.Printf("Error checking for existing user: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "서버 오류입니다."})
+			return
+		}
+	} else {
+		c.JSON(http.StatusConflict, gin.H{"error": "이미 존재하는 아이디입니다."})
+		return
+	}
+
+	_, err = h.dbLayer.InsertUser(user)
 	if err != nil {
 		log.Printf("Error inserting user: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "서버 오류입니다."})
 		return
 	}
-
-	//todo 추후 아이디 중복 여부 검사 메서드 추가 ************//
 
 	accessToken, err := generateJWT(user.UserId, time.Minute*15, h.jwtKey)
 	if err != nil {
@@ -216,4 +227,3 @@ func generateJWT(userId string, duration time.Duration, jwtKey []byte) (string, 
 	})
 	return token.SignedString(jwtKey)
 }
-

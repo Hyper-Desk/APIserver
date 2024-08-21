@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"hyperdesk/proxmox/rest"
 	"hyperdesk/vm/dblayer"
 	"hyperdesk/vm/models"
 	"net/http"
@@ -111,8 +112,12 @@ func (h *Handler) RegisterVMHandler(c *gin.Context) {
 		return
 	}
 
+	// VM의 상태와 사용자 ID 설정
 	vm.Status = "available"
 	vm.UserId = claims.UserId
+
+	// Unique ID 생성 및 할당
+	vm.UniqueId = rest.GenerateUniqueId(vm.VMId, vm.Name, vm.UserId, vm.MaxDisk, vm.MaxMem, vm.CPU)
 
 	_, err = h.dbLayer.InsertVM(vm)
 	if err != nil {
@@ -120,5 +125,5 @@ func (h *Handler) RegisterVMHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "VM registered successfully"})
+	c.JSON(http.StatusCreated, gin.H{"message": "VM registered successfully", "uniqueId": vm.UniqueId})
 }

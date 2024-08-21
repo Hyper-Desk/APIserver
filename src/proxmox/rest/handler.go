@@ -2,7 +2,9 @@ package rest
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,33 +14,41 @@ import (
 	"strings"
 	"time"
 
-	"hyperdesk/proxmox/dblayer"
+	proxmoxdb "hyperdesk/proxmox/dblayer"
 	"hyperdesk/proxmox/models"
+	vmdb "hyperdesk/vm/dblayer"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/go-errors/errors"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type Handler struct {
-	dbLayer dblayer.DBLayer
-	jwtKey  []byte
+	proxmoxdbLayer proxmoxdb.DBLayer
+	vmdbLayer      vmdb.DBLayer
+	jwtKey         []byte
 }
 
 // NewHandler는 새로운 핸들러를 생성합니다.
 func NewHandler() (*Handler, error) {
-	dbLayer, err := dblayer.NewORM()
-
+	proxmoxdbLayer, err := proxmoxdb.NewORM()
 	if err != nil {
-		return nil, errors.WrapPrefix(err, "Failed to create a new ORM", 1)
+		return nil, errors.WrapPrefix(err, "Failed to create a new proxmox ORM", 1)
+	}
+
+	vmdbLayer, err := vmdb.NewORM()
+	if err != nil {
+		return nil, errors.WrapPrefix(err, "Failed to create a new vm ORM", 1)
 	}
 
 	jwtKey := []byte(os.Getenv("TOKEN_SECRET"))
 
 	return &Handler{
-		dbLayer: dbLayer,
-		jwtKey:  jwtKey,
+		proxmoxdbLayer: proxmoxdbLayer,
+		vmdbLayer:      vmdbLayer,
+		jwtKey:         jwtKey,
 	}, nil
 }
 
@@ -81,14 +91,15 @@ func (h *Handler) ProxmoxVMListHandler(c *gin.Context) {
 		Port:    creds.Port,
 	}
 
-	_, err = h.dbLayer.InsertProxy(proxy)
+	_, err = h.proxmoxdbLayer.InsertProxy(proxy)
 	if err != nil {
 		log.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "프록시 정보 저장 실패"})
 		return
 	}
 
-	vmInfo, err := fetchProxmoxData(creds)
+	// Proxmox API를 통해 VM/CT 정보 가져오기
+	vmInfo, err := fetchProxmoxData(creds, userId, h)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Proxmox VM 정보 가져오기 실패"})
 		return
@@ -98,7 +109,7 @@ func (h *Handler) ProxmoxVMListHandler(c *gin.Context) {
 }
 
 // fetchProxmoxData fetches all VM and CT information from Proxmox.
-func fetchProxmoxData(creds models.ProxmoxCredentials) (map[string]interface{}, error) {
+func fetchProxmoxData(creds models.ProxmoxCredentials, userId string, h *Handler) (map[string]interface{}, error) {
 	nodes, err := fetchProxmoxNodes(creds)
 	if err != nil {
 		return nil, err
@@ -106,7 +117,7 @@ func fetchProxmoxData(creds models.ProxmoxCredentials) (map[string]interface{}, 
 
 	allData := make(map[string]interface{})
 	for _, node := range nodes {
-		nodeData, err := fetchNodeVMsAndCTs(creds, node)
+		nodeData, err := fetchNodeVMsAndCTs(creds, node, userId, h)
 		if err != nil {
 			log.Printf("Failed to fetch data for node %s: %v", node, err)
 			continue
@@ -179,7 +190,7 @@ func fetchProxmoxNodes(creds models.ProxmoxCredentials) ([]string, error) {
 }
 
 // fetchNodeVMsAndCTs fetches VM and CT information for a given node.
-func fetchNodeVMsAndCTs(creds models.ProxmoxCredentials, node string) (map[string]interface{}, error) {
+func fetchNodeVMsAndCTs(creds models.ProxmoxCredentials, node string, userId string, h *Handler) (map[string]interface{}, error) {
 	vmURL := fmt.Sprintf("https://%s:%s/api2/json/nodes/%s/qemu", creds.Address, creds.Port, node)
 	ctURL := fmt.Sprintf("https://%s:%s/api2/json/nodes/%s/lxc", creds.Address, creds.Port, node)
 
@@ -193,10 +204,129 @@ func fetchNodeVMsAndCTs(creds models.ProxmoxCredentials, node string) (map[strin
 		return nil, err
 	}
 
-	return map[string]interface{}{
-		"vms": vmData,
-		"cts": ctData,
-	}, nil
+	processedVMs, vmUniqueIds := processVMData(vmData, userId, h)
+	processedCTs, ctUniqueIds := processVMData(ctData, userId, h)
+
+	allUniqueIds := append(vmUniqueIds, ctUniqueIds...)
+	deleteAbsentsVMs(allUniqueIds, userId, h)
+
+	allData := map[string]interface{}{
+		"vms": processedVMs,
+		"cts": processedCTs,
+	}
+
+	return allData, nil
+}
+
+// GenerateUniqueId generates a unique ID based on VM/CT properties.
+func GenerateUniqueId(vmid, name, userid string, maxdisk string, maxmem string, cpu int) string {
+	data := fmt.Sprintf("%s:%s:%s:%s:%s:%d", vmid, name, userid, maxdisk, maxmem, cpu)
+	hash := sha256.Sum256([]byte(data))
+	return hex.EncodeToString(hash[:])
+}
+
+// processVMData processes the VM/CT data and checks if it's already registered.
+func processVMData(data interface{}, userId string, h *Handler) ([]interface{}, []string) {
+	processed := []interface{}{}
+	uniqueIds := []string{}
+
+	// Assuming `data` is an array of VMs/CTs
+	vms := data.([]interface{})
+
+	for _, vm := range vms {
+		vmMap := vm.(map[string]interface{})
+
+		vmid := fmt.Sprintf("%v", vmMap["vmid"]) // Convert vmid to string if it's not
+		name := vmMap["name"].(string)
+
+		// 소수점 둘째 자리까지 표시
+		diskread := fmt.Sprintf("%.2f", vmMap["diskread"].(float64)/(1024*1024*1024)) // GB
+		vmMap["diskread"] = diskread
+
+		diskwrite := fmt.Sprintf("%.2f", vmMap["diskwrite"].(float64)/(1024*1024*1024)) // GB
+		vmMap["diskwrite"] = diskwrite
+
+		disk := fmt.Sprintf("%.2f", vmMap["disk"].(float64)/(1024*1024*1024)) // GB
+		vmMap["disk"] = disk
+
+		maxdisk := fmt.Sprintf("%.2f", vmMap["maxdisk"].(float64)/(1024*1024*1024)) // GB
+		vmMap["maxdisk"] = maxdisk
+
+		maxmem := fmt.Sprintf("%.2f", vmMap["maxmem"].(float64)/(1024*1024)) // MB
+		vmMap["maxmem"] = maxmem
+
+		mem := fmt.Sprintf("%.2f", vmMap["mem"].(float64)/(1024*1024)) // MB
+		vmMap["mem"] = mem
+
+		cpu := int(vmMap["cpus"].(float64))
+		vmMap["cpus"] = cpu
+
+		uniqueId := GenerateUniqueId(vmid, name, userId, maxdisk, maxmem, cpu)
+		vmMap["uniqueId"] = uniqueId
+
+		// Add the uniqueId to the list
+		uniqueIds = append(uniqueIds, uniqueId)
+
+		// Check if this VM/CT is already registered
+		_, err := h.vmdbLayer.FindVMByUniqueId(uniqueId)
+
+		if err == mongo.ErrNoDocuments {
+			// VM is not yet registered
+			vmMap["registered"] = false
+		} else if err == nil {
+			// VM is already registered
+			vmMap["registered"] = true
+		} else {
+			// Handle potential errors
+			log.Printf("Error checking if VM is registered: %v", err)
+		}
+
+		processed = append(processed, vmMap)
+	}
+
+	return processed, uniqueIds
+}
+
+// deleteAbsentsVMs deletes VMs from the collection that are no longer present in the Proxmox API response.
+func deleteAbsentsVMs(fetchedUniqueIds []string, userId string, h *Handler) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Fetch all VMs for the userId
+	cursor, err := h.vmdbLayer.FindVMByUserId(userId)
+	if err != nil {
+		log.Printf("Error fetching VMs from database: %v", err)
+		return
+	}
+	defer cursor.Close(ctx)
+
+	existingVMs := make(map[string]string)
+	for cursor.Next(ctx) {
+		var vm models.VM
+		if err := cursor.Decode(&vm); err != nil {
+			log.Printf("Error decoding VM from database: %v", err)
+			continue
+		}
+		existingVMs[vm.UniqueId] = vm.VMId
+	}
+
+	// Create a set of fetched unique IDs for fast lookup
+	fetchedUniqueIdSet := make(map[string]bool)
+	for _, id := range fetchedUniqueIds {
+		fetchedUniqueIdSet[id] = true
+	}
+
+	// Delete VMs that are no longer present
+	for uniqueId, vmId := range existingVMs {
+		if !fetchedUniqueIdSet[uniqueId] {
+			err := h.vmdbLayer.DeleteVM(ctx, bson.M{"uniqueId": uniqueId, "userId": userId})
+			if err != nil {
+				log.Printf("Error deleting absent VM from database: %v", err)
+			} else {
+				log.Printf("Deleted absent VM with ID: %s", vmId)
+			}
+		}
+	}
 }
 
 // fetchProxmoxDataForURL fetches data from a specific URL.
@@ -259,7 +389,7 @@ func getProxmoxToken(creds models.ProxmoxCredentials) (string, string, error) {
 	}
 	client := &http.Client{
 		Transport: tr,
-		Timeout:   time.Second,
+		Timeout:   5 * time.Second,
 	}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -317,7 +447,7 @@ func (h *Handler) ProxyHandler(c *gin.Context) {
 	defer cancel()
 
 	var result models.Proxy
-	err = h.dbLayer.FindProxyByUserId(ctx, claims.UserId, &result)
+	err = h.proxmoxdbLayer.FindProxyByUserId(ctx, claims.UserId, &result)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			c.JSON(http.StatusNotFound, gin.H{"error": "프록시 정보를 찾을 수 없습니다."})

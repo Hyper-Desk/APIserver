@@ -52,6 +52,26 @@ func (orm *ORM) FindVMById(vmId string) (*models.VM, error) {
 	return &vm, err
 }
 
+// FindVMByUniqueId는 주어진 uniqueId로 VM을 조회합니다.
+func (orm *ORM) FindVMByUniqueId(uniqueId string) (*models.VM, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var vm models.VM
+	err := orm.vmCollection.FindOne(ctx, bson.M{"uniqueId": uniqueId}).Decode(&vm)
+	return &vm, err
+}
+
+// FindVMByUserId는 주어진 userId로 VM을 조회합니다.
+func (orm *ORM) FindVMByUserId(userId string) (*mongo.Cursor, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	filter := bson.M{"userId": userId}
+	cursor, err := orm.vmCollection.Find(ctx, filter)
+	return cursor, err
+}
+
 // UpdateVMStatus는 VM의 상태와 사용자 ID를 업데이트합니다.
 func (orm *ORM) UpdateVMStatus(vmId string, status string, userId string) (*mongo.UpdateResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -82,4 +102,10 @@ func (orm *ORM) FindAvailableVMs() ([]models.VM, error) {
 		return nil, err
 	}
 	return vms, nil
+}
+
+// DeleteVM은 filter 조건에 해당하는 VM을 삭제합니다.
+func (orm *ORM) DeleteVM(ctx context.Context, filter interface{}) error {
+	_, err := orm.vmCollection.DeleteOne(ctx, filter)
+	return err
 }

@@ -252,10 +252,10 @@ func processVMData(data interface{}, userId string, h *Handler) ([]interface{}, 
 		maxdisk := fmt.Sprintf("%.2f", vmMap["maxdisk"].(float64)/(1024*1024*1024)) // GB
 		vmMap["maxdisk"] = maxdisk
 
-		maxmem := fmt.Sprintf("%.2f", vmMap["maxmem"].(float64)/(1024*1024)) // MB
+		maxmem := fmt.Sprintf("%.2f", vmMap["maxmem"].(float64)/(1024*1024*1024)) // GB
 		vmMap["maxmem"] = maxmem
 
-		mem := fmt.Sprintf("%.2f", vmMap["mem"].(float64)/(1024*1024)) // MB
+		mem := fmt.Sprintf("%.2f", vmMap["mem"].(float64)/(1024*1024*1024)) // GB
 		vmMap["mem"] = mem
 
 		cpu := int(vmMap["cpus"].(float64))

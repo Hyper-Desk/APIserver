@@ -73,7 +73,7 @@ func (h *Handler) RegisterHandler(c *gin.Context) {
 		return
 	}
 
-	accessToken, err := generateJWT(user.UserId, time.Minute*15, h.jwtKey)
+	accessToken, err := generateJWT(user.UserId, time.Minute*30, h.jwtKey)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "액세스 토큰 생성 실패"})
 		return
@@ -127,7 +127,7 @@ func (h *Handler) LoginHandler(c *gin.Context) {
 		return
 	}
 
-	accessToken, err := generateJWT(user.UserId, time.Minute*15, h.jwtKey)
+	accessToken, err := generateJWT(user.UserId, time.Minute*30, h.jwtKey)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "액세스 토큰 생성 실패"})
 		return
@@ -199,7 +199,7 @@ func (h *Handler) RefreshHandler(c *gin.Context) {
 		return
 	}
 
-	accessToken, err := generateJWT(result.UserId, time.Minute*15, h.jwtKey)
+	accessToken, err := generateJWT(result.UserId, time.Minute*30, h.jwtKey)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "액세스 토큰 생성 실패"})
 		return

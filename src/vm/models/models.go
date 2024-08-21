@@ -1,13 +1,18 @@
 package models
 
 import (
-    "github.com/dgrijalva/jwt-go"
+	"github.com/dgrijalva/jwt-go"
 )
 
 type VM struct {
-	VMId   string `json:"vmId" bson:"vmId"`
-	Status string `json:"status" bson:"status"`
-	UserId string `json:"userId" bson:"userId"`
+	Status   string `json:"status" bson:"status"`
+	UserId   string `json:"userId" bson:"userId"`
+	CPU      int    `json:"cpu" bson:"cpu"`
+	MaxDisk  string `json:"maxdisk" bson:"maxdisk"`
+	MaxMem   string `json:"maxmem" bson:"maxmem"`
+	Name     string `json:"name" bson:"name"`
+	VMId     string `json:"vmid" bson:"vmid"`
+	UniqueId string `json:"uniqueId" bson:"uniqueId"`
 }
 
 type TokenClaims struct {

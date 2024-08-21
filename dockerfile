@@ -1,17 +1,23 @@
-# golang 이미지를 사용
+###### build stage ######
 FROM golang:1.22.3-alpine AS builder
 
-# work dir
 WORKDIR /home/server
 
-# host pc의 현재경로의 디렉토리를 workdir 의 디렉토리로 복사
-COPY . .
+COPY src /home/server/src
 
+WORKDIR /home/server/src
+
+RUN go mod download
+
+RUN GOOS=linux GOARCH=amd64 go build -o main .
+
+###### final stage ######
+FROM alpine:latest
+
+WORKDIR /home/server
+
+COPY --from=builder /home/server/src/main .
 
 EXPOSE 8080
 
-RUN GOOS=linux GOARCH=amd64 go build -o main
-
-# 8080 포트 오픈
-
-CMD [ "./main" ]
+CMD ["./main"]

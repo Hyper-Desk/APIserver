@@ -17,6 +17,7 @@ FROM alpine:latest
 WORKDIR /home/server
 
 COPY --from=builder /home/server/src/main .
+COPY --from=builder /home/server/src/.env .
 
 EXPOSE 8080
 

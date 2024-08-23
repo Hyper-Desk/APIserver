@@ -4,11 +4,12 @@ import (
 	proxmox_rest "hyperdesk/proxmox/rest"
 	user_rest "hyperdesk/user/rest"
 	vm_rest "hyperdesk/vm/rest"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-func Run(address string) error {
+func Run(address string) (chan error, error) {
 	router := gin.Default()
 
 	router.Use(func(c *gin.Context) {
@@ -33,5 +34,8 @@ func Run(address string) error {
 	v3 := router.Group("/api/proxmox")
 	proxmox_rest.ProxmoxRoutes(v3)
 
-	return router.Run(address)
+	httpsErrChan := make(chan error)
+	go func() { httpsErrChan <- http.ListenAndServeTLS(address, "cert.pem", "key.pem", router) }()
+
+	return httpsErrChan, router.Run(address)
 }

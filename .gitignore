@@ -21,4 +21,3 @@ hyperdesk
 # Go workspace file
 go.work
 *.env
-*.pem

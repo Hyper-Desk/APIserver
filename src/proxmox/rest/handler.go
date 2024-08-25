@@ -46,6 +46,16 @@ func NewHandler() (*Handler, error) {
 }
 
 // NodeHandler는 Proxmox에서 Node 리스트를 가져옵니다.
+// @Summary Proxmox Node 리스트 가져오기
+// @Description Proxmox에서 Node 리스트를 가져옵니다.
+// @Tags proxmox
+// @Accept  json
+// @Produce  json
+// @Param  ProxmoxCredentials  body  models.ProxmoxCredentials  true  "Proxmox Credentials"
+// @Success 200 {array} []string "Node 리스트"
+// @Failure 400 {object} string "잘못된 요청입니다."
+// @Failure 500 {object} string "서버 오류입니다."
+// @Router /api/proxmox/nodes [post]
 func (h *Handler) NodeHandler(c *gin.Context) {
 	var creds models.ProxmoxCredentials
 	if err := c.BindJSON(&creds); err != nil {
@@ -62,6 +72,18 @@ func (h *Handler) NodeHandler(c *gin.Context) {
 }
 
 // ProxmoxVMListHandler는 Proxmox Node의 VM 리스트를 가져옵니다.
+// @Summary Proxmox VM 리스트 가져오기
+// @Description Proxmox Node의 VM 리스트를 가져옵니다.
+// @Tags proxmox
+// @Accept  json
+// @Produce  json
+// @Param ProxmoxRequestBody body models.ProxmoxRequestBody true "Proxmox Request Body"
+// @Success 200 {array} map[string]interface{} "VM 리스트"
+// @Failure 400 {object} string "잘못된 요청입니다."
+// @Failure 401 {object} string "잘못된 토큰입니다."
+// @Failure 500 {object} string "서버 오류입니다."
+// @Router /api/proxmox/vm [post]
+// @Security ApiKey
 func (h *Handler) ProxmoxVMListHandler(c *gin.Context) {
 	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" {
@@ -119,6 +141,16 @@ func (h *Handler) ProxmoxVMListHandler(c *gin.Context) {
 }
 
 // ProxyHandler는 Proxmox 서버의 url, port 정보를 가져옵니다.
+// @Summary Proxmox 서버의 프록시 정보 가져오기
+// @Description Proxmox 서버의 URL 및 포트 정보를 가져옵니다.
+// @Tags proxmox
+// @Produce  json
+// @Success 200 {object} models.Proxy "프록시 정보"
+// @Failure 401 {object} string "잘못된 토큰입니다."
+// @Failure 404 {object} string "프록시 정보를 찾을 수 없습니다."
+// @Failure 500 {object} string "서버 오류입니다."
+// @Router /api/proxmox/proxy [get]
+// @Security ApiKey
 func (h *Handler) ProxyHandler(c *gin.Context) {
 	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" {
@@ -162,6 +194,16 @@ func (h *Handler) ProxyHandler(c *gin.Context) {
 }
 
 // NetworkInfoHandler Proxmox Node의 Network 리스트를 가져옵니다.
+// @Summary Proxmox Network 리스트 가져오기
+// @Description Proxmox Node의 Network 리스트를 가져옵니다.
+// @Tags proxmox
+// @Accept  json
+// @Produce  json
+// @Param ProxmoxRequestBody body models.ProxmoxRequestBody true "Proxmox Request Body"
+// @Success 200 {array} []string "Network 리스트"
+// @Failure 400 {object} string "잘못된 요청입니다."
+// @Failure 500 {object} string "서버 오류입니다."
+// @Router /api/proxmox/network [post]
 func (h *Handler) NetworkInfoHandler(c *gin.Context) {
 	var req models.ProxmoxRequestBody
 	if err := c.BindJSON(&req); err != nil {
@@ -179,6 +221,16 @@ func (h *Handler) NetworkInfoHandler(c *gin.Context) {
 }
 
 // StorageInfoHandler는 Proxmox Node의 Storage 리스트를 가져옵니다.
+// @Summary Proxmox Storage 리스트 가져오기
+// @Description Proxmox Node의 Storage 리스트를 가져옵니다.
+// @Tags proxmox
+// @Accept  json
+// @Produce  json
+// @Param ProxmoxRequestBody body models.ProxmoxRequestBody true "Proxmox Request Body"
+// @Success 200 {array} models.StorageList "Storage 리스트"
+// @Failure 400 {object} string "잘못된 요청입니다."
+// @Failure 500 {object} string "서버 오류입니다."
+// @Router /api/proxmox/storage [post]
 func (h *Handler) StorageInfoHandler(c *gin.Context) {
 	var req models.ProxmoxRequestBody
 	if err := c.BindJSON(&req); err != nil {

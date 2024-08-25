@@ -38,3 +38,8 @@ type VM struct {
 	VMId     string `json:"vmid" bson:"vmid"`
 	UniqueId string `json:"uniqueId" bson:"uniqueId"`
 }
+
+type StorageList struct {
+	DiskStorage []interface{} `json:"diskStorage"`
+	IsoStorage  []interface{} `json:"isoStorage"`
+}

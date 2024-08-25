@@ -1,0 +1,506 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "This is hyperdesk server.",
+        "title": "Swagger Hyperdesk API",
+        "termsOfService": "http://swagger.io/terms/",
+        "contact": {
+            "name": "API Support",
+            "url": "http://www.swagger.io/support",
+            "email": "support@swagger.io"
+        },
+        "license": {
+            "name": "Apache 2.0",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+        },
+        "version": "1.0"
+    },
+    "paths": {
+        "/api/proxmox/network": {
+            "post": {
+                "description": "Proxmox Node의 Network 리스트를 가져옵니다.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "proxmox"
+                ],
+                "summary": "Proxmox Network 리스트 가져오기",
+                "parameters": [
+                    {
+                        "description": "Proxmox Request Body",
+                        "name": "ProxmoxRequestBody",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.ProxmoxRequestBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Network 리스트",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "잘못된 요청입니다.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "서버 오류입니다.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/proxmox/nodes": {
+            "post": {
+                "description": "Proxmox에서 Node 리스트를 가져옵니다.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "proxmox"
+                ],
+                "summary": "Proxmox Node 리스트 가져오기",
+                "parameters": [
+                    {
+                        "description": "Proxmox Credentials",
+                        "name": "ProxmoxCredentials",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.ProxmoxCredentials"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Node 리스트",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "잘못된 요청입니다.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "서버 오류입니다.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/proxmox/proxy": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKey": []
+                    }
+                ],
+                "description": "Proxmox 서버의 URL 및 포트 정보를 가져옵니다.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "proxmox"
+                ],
+                "summary": "Proxmox 서버의 프록시 정보 가져오기",
+                "responses": {
+                    "200": {
+                        "description": "프록시 정보",
+                        "schema": {
+                            "$ref": "#/definitions/hyperdesk_proxmox_models.Proxy"
+                        }
+                    },
+                    "401": {
+                        "description": "잘못된 토큰입니다.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "프록시 정보를 찾을 수 없습니다.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "서버 오류입니다.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/proxmox/storage": {
+            "post": {
+                "description": "Proxmox Node의 Storage 리스트를 가져옵니다.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "proxmox"
+                ],
+                "summary": "Proxmox Storage 리스트 가져오기",
+                "parameters": [
+                    {
+                        "description": "Proxmox Request Body",
+                        "name": "ProxmoxRequestBody",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.ProxmoxRequestBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Storage 리스트",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.StorageList"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "잘못된 요청입니다.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "서버 오류입니다.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/proxmox/vm": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKey": []
+                    }
+                ],
+                "description": "Proxmox Node의 VM 리스트를 가져옵니다.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "proxmox"
+                ],
+                "summary": "Proxmox VM 리스트 가져오기",
+                "parameters": [
+                    {
+                        "description": "Proxmox Request Body",
+                        "name": "ProxmoxRequestBody",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.ProxmoxRequestBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "VM 리스트",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "additionalProperties": true
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "잘못된 요청입니다.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "잘못된 토큰입니다.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "서버 오류입니다.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/user/login": {
+            "post": {
+                "description": "사용자 ID와 비밀번호를 사용하여 로그인하고 새로운 액세스 토큰과 리프레시 토큰을 생성합니다.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "사용자 로그인",
+                "parameters": [
+                    {
+                        "description": "사용자 로그인 정보",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.User"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/user/refresh": {
+            "post": {
+                "description": "유효한 리프레시 토큰을 사용하여 새로운 액세스 토큰을 재발급합니다.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "리프레시 토큰으로 액세스 토큰 재발급",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/user/signup": {
+            "post": {
+                "description": "사용자 ID와 비밀번호를 사용하여 새로운 사용자를 등록합니다.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "사용자 등록",
+                "parameters": [
+                    {
+                        "description": "사용자 등록 정보",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.User"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "hyperdesk_proxmox_models.Proxy": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "string"
+                },
+                "userId": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ProxmoxCredentials": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "string"
+                },
+                "userId": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ProxmoxRequestBody": {
+            "type": "object",
+            "properties": {
+                "creds": {
+                    "$ref": "#/definitions/models.ProxmoxCredentials"
+                },
+                "node": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.StorageList": {
+            "type": "object",
+            "properties": {
+                "diskStorage": {
+                    "type": "array",
+                    "items": {}
+                },
+                "isoStorage": {
+                    "type": "array",
+                    "items": {}
+                }
+            }
+        },
+        "models.User": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
+                "userId": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "ApiKey": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

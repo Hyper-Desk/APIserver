@@ -1,0 +1,330 @@
+definitions:
+  hyperdesk_proxmox_models.Proxy:
+    properties:
+      address:
+        type: string
+      port:
+        type: string
+      userId:
+        type: string
+    type: object
+  models.ProxmoxCredentials:
+    properties:
+      address:
+        type: string
+      password:
+        type: string
+      port:
+        type: string
+      userId:
+        type: string
+    type: object
+  models.ProxmoxRequestBody:
+    properties:
+      creds:
+        $ref: '#/definitions/models.ProxmoxCredentials'
+      node:
+        type: string
+    type: object
+  models.StorageList:
+    properties:
+      diskStorage:
+        items: {}
+        type: array
+      isoStorage:
+        items: {}
+        type: array
+    type: object
+  models.User:
+    properties:
+      password:
+        type: string
+      userId:
+        type: string
+    type: object
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: This is hyperdesk server.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Swagger Hyperdesk API
+  version: "1.0"
+paths:
+  /api/proxmox/network:
+    post:
+      consumes:
+      - application/json
+      description: Proxmox Node의 Network 리스트를 가져옵니다.
+      parameters:
+      - description: Proxmox Request Body
+        in: body
+        name: ProxmoxRequestBody
+        required: true
+        schema:
+          $ref: '#/definitions/models.ProxmoxRequestBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Network 리스트
+          schema:
+            items:
+              items:
+                type: string
+              type: array
+            type: array
+        "400":
+          description: 잘못된 요청입니다.
+          schema:
+            type: string
+        "500":
+          description: 서버 오류입니다.
+          schema:
+            type: string
+      summary: Proxmox Network 리스트 가져오기
+      tags:
+      - proxmox
+  /api/proxmox/nodes:
+    post:
+      consumes:
+      - application/json
+      description: Proxmox에서 Node 리스트를 가져옵니다.
+      parameters:
+      - description: Proxmox Credentials
+        in: body
+        name: ProxmoxCredentials
+        required: true
+        schema:
+          $ref: '#/definitions/models.ProxmoxCredentials'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Node 리스트
+          schema:
+            items:
+              items:
+                type: string
+              type: array
+            type: array
+        "400":
+          description: 잘못된 요청입니다.
+          schema:
+            type: string
+        "500":
+          description: 서버 오류입니다.
+          schema:
+            type: string
+      summary: Proxmox Node 리스트 가져오기
+      tags:
+      - proxmox
+  /api/proxmox/proxy:
+    get:
+      description: Proxmox 서버의 URL 및 포트 정보를 가져옵니다.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 프록시 정보
+          schema:
+            $ref: '#/definitions/hyperdesk_proxmox_models.Proxy'
+        "401":
+          description: 잘못된 토큰입니다.
+          schema:
+            type: string
+        "404":
+          description: 프록시 정보를 찾을 수 없습니다.
+          schema:
+            type: string
+        "500":
+          description: 서버 오류입니다.
+          schema:
+            type: string
+      security:
+      - ApiKey: []
+      summary: Proxmox 서버의 프록시 정보 가져오기
+      tags:
+      - proxmox
+  /api/proxmox/storage:
+    post:
+      consumes:
+      - application/json
+      description: Proxmox Node의 Storage 리스트를 가져옵니다.
+      parameters:
+      - description: Proxmox Request Body
+        in: body
+        name: ProxmoxRequestBody
+        required: true
+        schema:
+          $ref: '#/definitions/models.ProxmoxRequestBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Storage 리스트
+          schema:
+            items:
+              $ref: '#/definitions/models.StorageList'
+            type: array
+        "400":
+          description: 잘못된 요청입니다.
+          schema:
+            type: string
+        "500":
+          description: 서버 오류입니다.
+          schema:
+            type: string
+      summary: Proxmox Storage 리스트 가져오기
+      tags:
+      - proxmox
+  /api/proxmox/vm:
+    post:
+      consumes:
+      - application/json
+      description: Proxmox Node의 VM 리스트를 가져옵니다.
+      parameters:
+      - description: Proxmox Request Body
+        in: body
+        name: ProxmoxRequestBody
+        required: true
+        schema:
+          $ref: '#/definitions/models.ProxmoxRequestBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: VM 리스트
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+        "400":
+          description: 잘못된 요청입니다.
+          schema:
+            type: string
+        "401":
+          description: 잘못된 토큰입니다.
+          schema:
+            type: string
+        "500":
+          description: 서버 오류입니다.
+          schema:
+            type: string
+      security:
+      - ApiKey: []
+      summary: Proxmox VM 리스트 가져오기
+      tags:
+      - proxmox
+  /api/user/login:
+    post:
+      consumes:
+      - application/json
+      description: 사용자 ID와 비밀번호를 사용하여 로그인하고 새로운 액세스 토큰과 리프레시 토큰을 생성합니다.
+      parameters:
+      - description: 사용자 로그인 정보
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.User'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            items:
+              type: string
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: 사용자 로그인
+      tags:
+      - user
+  /api/user/refresh:
+    post:
+      consumes:
+      - application/json
+      description: 유효한 리프레시 토큰을 사용하여 새로운 액세스 토큰을 재발급합니다.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: string
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: 리프레시 토큰으로 액세스 토큰 재발급
+      tags:
+      - user
+  /api/user/signup:
+    post:
+      consumes:
+      - application/json
+      description: 사용자 ID와 비밀번호를 사용하여 새로운 사용자를 등록합니다.
+      parameters:
+      - description: 사용자 등록 정보
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.User'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            items:
+              type: string
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "409":
+          description: Conflict
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: 사용자 등록
+      tags:
+      - user
+securityDefinitions:
+  ApiKey:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

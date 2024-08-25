@@ -40,6 +40,17 @@ func NewHandler() (*Handler, error) {
 	}, nil
 }
 
+// @Summary 사용자 등록
+// @Description 사용자 ID와 비밀번호를 사용하여 새로운 사용자를 등록합니다.
+// @Tags user
+// @Accept json
+// @Produce json
+// @Param user body models.User true "사용자 등록 정보"
+// @Success 201 {object} []string
+// @Failure 400 {object} string
+// @Failure 409 {object} string
+// @Failure 500 {object} string
+// @Router /api/user/signup [post]
 func (h *Handler) RegisterHandler(c *gin.Context) {
 	var user models.User
 	if err := c.BindJSON(&user); err != nil {
@@ -109,6 +120,17 @@ func (h *Handler) RegisterHandler(c *gin.Context) {
 	})
 }
 
+// @Summary 사용자 로그인
+// @Description 사용자 ID와 비밀번호를 사용하여 로그인하고 새로운 액세스 토큰과 리프레시 토큰을 생성합니다.
+// @Tags user
+// @Accept json
+// @Produce json
+// @Param user body models.User true "사용자 로그인 정보"
+// @Success 201 {object} []string
+// @Failure 400 {object} string
+// @Failure 401 {object} string
+// @Failure 500 {object} string
+// @Router /api/user/login [post]
 func (h *Handler) LoginHandler(c *gin.Context) {
 	var user models.User
 	if err := c.BindJSON(&user); err != nil {
@@ -169,6 +191,16 @@ func (h *Handler) LoginHandler(c *gin.Context) {
 	})
 }
 
+// @Summary 리프레시 토큰으로 액세스 토큰 재발급
+// @Description 유효한 리프레시 토큰을 사용하여 새로운 액세스 토큰을 재발급합니다.
+// @Tags user
+// @Accept json
+// @Produce json
+// @Success 200 {object} []string
+// @Failure 400 {object} string
+// @Failure 401 {object} string
+// @Failure 500 {object} string
+// @Router /api/user/refresh [post]
 func (h *Handler) RefreshHandler(c *gin.Context) {
 	refreshToken, err := c.Cookie("refreshToken")
 	if err != nil {

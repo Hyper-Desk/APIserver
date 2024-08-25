@@ -6,12 +6,7 @@ import (
 	"strings"
 )
 
-type storageList struct {
-	DiskStorage []interface{} `json:"diskStorage"`
-	IsoStorage  []interface{} `json:"isoStorage"`
-}
-
-func fetchStorage(req models.ProxmoxRequestBody) (*storageList, error) {
+func fetchStorage(req models.ProxmoxRequestBody) (*models.StorageList, error) {
 	var creds = req.Creds
 	url := fmt.Sprintf("https://%s:%s/api2/json/nodes/%s/storage", creds.Address, creds.Port, req.Node)
 
@@ -49,7 +44,7 @@ func fetchStorage(req models.ProxmoxRequestBody) (*storageList, error) {
 		}
 	}
 
-	return &storageList{
+	return &models.StorageList{
 		DiskStorage: diskStorage,
 		IsoStorage:  isoStorage,
 	}, nil

@@ -240,12 +240,12 @@ const docTemplate = `{
                 "summary": "Proxmox VM 리스트 가져오기",
                 "parameters": [
                     {
-                        "description": "Proxmox Request Body",
-                        "name": "ProxmoxRequestBody",
+                        "description": "Proxmox Credentials",
+                        "name": "ProxmoxCredentials",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.ProxmoxRequestBody"
+                            "$ref": "#/definitions/models.ProxmoxCredentials"
                         }
                     }
                 ],

@@ -77,7 +77,7 @@ func (h *Handler) NodeHandler(c *gin.Context) {
 // @Tags proxmox
 // @Accept  json
 // @Produce  json
-// @Param ProxmoxRequestBody body models.ProxmoxRequestBody true "Proxmox Request Body"
+// @Param  ProxmoxCredentials  body  models.ProxmoxCredentials  true  "Proxmox Credentials"
 // @Success 200 {array} map[string]interface{} "VM 리스트"
 // @Failure 400 {object} string "잘못된 요청입니다."
 // @Failure 401 {object} string "잘못된 토큰입니다."
@@ -110,13 +110,12 @@ func (h *Handler) ProxmoxVMListHandler(c *gin.Context) {
 
 	userId := claims.UserId
 
-	var req models.ProxmoxRequestBody
-	if err := c.BindJSON(&req); err != nil {
+	var creds models.ProxmoxCredentials
+	if err := c.BindJSON(&creds); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "잘못된 요청입니다."})
 		return
 	}
 
-	var creds = req.Creds
 	proxy := models.Proxy{
 		UserId:  userId,
 		Address: creds.Address,
@@ -131,7 +130,7 @@ func (h *Handler) ProxmoxVMListHandler(c *gin.Context) {
 	}
 
 	// Proxmox API를 통해 VM/CT 정보 가져오기
-	vmInfo, err := fetchNodeVMsAndCTs(req, userId, h)
+	vmInfo, err := fetchVMs(creds, userId, h)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Proxmox VM 정보 가져오기 실패"})
 		return

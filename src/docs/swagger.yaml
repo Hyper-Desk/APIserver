@@ -188,12 +188,12 @@ paths:
       - application/json
       description: Proxmox Node의 VM 리스트를 가져옵니다.
       parameters:
-      - description: Proxmox Request Body
+      - description: Proxmox Credentials
         in: body
-        name: ProxmoxRequestBody
+        name: ProxmoxCredentials
         required: true
         schema:
-          $ref: '#/definitions/models.ProxmoxRequestBody'
+          $ref: '#/definitions/models.ProxmoxCredentials'
       produces:
       - application/json
       responses:

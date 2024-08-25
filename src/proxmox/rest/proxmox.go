@@ -15,4 +15,5 @@ func ProxmoxRoutes(proxmox *gin.RouterGroup) {
 	proxmox.POST("/nodes", h.NodeHandler)
 	proxmox.POST("/vm", h.ProxmoxVMListHandler)
 	proxmox.GET("/proxy", h.ProxyHandler)
+	proxmox.POST("/network", h.NetworkInfoHandler)
 }

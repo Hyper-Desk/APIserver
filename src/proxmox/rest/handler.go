@@ -160,3 +160,20 @@ func (h *Handler) ProxyHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, result)
 }
+
+// NetworkInfoHandler Proxmox Node의 Network 리스트를 가져옵니다.
+func (h *Handler) NetworkInfoHandler(c *gin.Context) {
+	var req models.ProxmoxRequestBody
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "잘못된 요청입니다."})
+		return
+	}
+
+	netData, err := fetchNetworks(req)
+	if err != nil {
+		log.Printf("Failed to fetch data for node %s: %v", req.Node, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, netData)
+}

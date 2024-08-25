@@ -12,6 +12,7 @@ func ProxmoxRoutes(proxmox *gin.RouterGroup) {
 		log.Printf("Failed to create handler: %v", err)
 		return
 	}
+	proxmox.POST("/nodes", h.NodeHandler)
 	proxmox.POST("/vm", h.ProxmoxVMListHandler)
 	proxmox.GET("/proxy", h.ProxyHandler)
 }

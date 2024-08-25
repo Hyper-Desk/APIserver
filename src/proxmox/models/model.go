@@ -10,6 +10,11 @@ type ProxmoxCredentials struct {
 	Password string `json:"password"`
 }
 
+type ProxmoxRequestBody struct {
+	Node  string             `json:"node"`
+	Creds ProxmoxCredentials `json:"creds"`
+}
+
 // Proxy는 사용자와 관련된 프록시 정보를 정의합니다.
 type Proxy struct {
 	UserId  string `json:"userId" bson:"userId"`

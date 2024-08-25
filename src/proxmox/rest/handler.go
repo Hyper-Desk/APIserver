@@ -177,3 +177,20 @@ func (h *Handler) NetworkInfoHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, netData)
 }
+
+// StorageInfoHandler는 Proxmox Node의 Storage 리스트를 가져옵니다.
+func (h *Handler) StorageInfoHandler(c *gin.Context) {
+	var req models.ProxmoxRequestBody
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "잘못된 요청입니다."})
+		return
+	}
+
+	storageData, err := fetchStorage(req)
+	if err != nil {
+		log.Printf("Failed to fetch data for node %s: %v", req.Node, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, storageData)
+}

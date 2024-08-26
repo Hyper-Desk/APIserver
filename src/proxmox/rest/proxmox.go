@@ -17,4 +17,5 @@ func ProxmoxRoutes(proxmox *gin.RouterGroup) {
 	proxmox.GET("/proxy", h.ProxyHandler)
 	proxmox.POST("/network", h.NetworkInfoHandler)
 	proxmox.POST("/storage", h.StorageInfoHandler)
+	proxmox.POST("/iso", h.IsoInfoHandler)
 }

@@ -3,6 +3,7 @@ package rest
 import (
 	"fmt"
 	"hyperdesk/proxmox/models"
+	"log"
 	"strings"
 )
 
@@ -48,4 +49,39 @@ func fetchStorage(req models.ProxmoxRequestBody) (*models.StorageList, error) {
 		DiskStorage: diskStorage,
 		IsoStorage:  isoStorage,
 	}, nil
+}
+
+func fetchIsos(req models.ProxmoxRequestBody) ([]map[string]interface{}, error) {
+	storageData, _ := fetchStorage(req)
+
+	var isoData []map[string]interface{}
+	for _, storage := range storageData.IsoStorage {
+		storageMap, ok := storage.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		storageName := storageMap["storage"].(string)
+		iso, err := fetchIso(req, storageName)
+		if err != nil {
+			log.Printf("Failed to fetch data for node %s: %v", storage, err)
+			continue
+		}
+		isoData = append(isoData, map[string]interface{}{
+			storageName: iso,
+		})
+	}
+
+	return isoData, nil
+}
+
+func fetchIso(req models.ProxmoxRequestBody, storage string) ([]interface{}, error) {
+	var creds = req.Creds
+	url := fmt.Sprintf("https://%s:%s/api2/json/nodes/%s/storage/%s/content", creds.Address, creds.Port, req.Node, storage)
+
+	isoData, err := fetchProxmoxDataForURL(req.Creds, url, "GET")
+	if err != nil {
+		return nil, err
+	}
+
+	return isoData, nil
 }

@@ -245,3 +245,19 @@ func (h *Handler) StorageInfoHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, storageData)
 }
+
+func (h *Handler) IsoInfoHandler(c *gin.Context) {
+	var req models.ProxmoxRequestBody
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "잘못된 요청입니다."})
+		return
+	}
+
+	isoData, err := fetchIsos(req)
+	if err != nil {
+		log.Printf("Failed to fetch data for node %s: %v", req.Node, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, isoData)
+}

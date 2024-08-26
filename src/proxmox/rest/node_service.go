@@ -6,27 +6,20 @@ import (
 	"fmt"
 	"hyperdesk/proxmox/models"
 	"io"
-	"log"
 	"net/http"
 )
 
-func fetchProxmoxNodes(creds models.ProxmoxCredentials) ([]string, error) {
-	url := fmt.Sprintf("https://%s:%s/api2/json/nodes/", creds.Address, creds.Port)
+func fetchProxmoxNodes(token models.ProxmoxToken, proxy models.Proxy) ([]string, error) {
+	url := fmt.Sprintf("https://%s:%s/api2/json/nodes/", proxy.Address, proxy.Port)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	token, csrfToken, err := getProxmoxToken(creds)
-	if err != nil {
-		log.Printf("Failed to get Proxmox token: %v", err)
-		return nil, err
-	}
-
-	req.Header.Set("Authorization", "PVEAuthCookie="+token)
-	if csrfToken != "" {
-		req.Header.Set("CSRFPreventionToken", csrfToken)
+	req.Header.Set("Authorization", "PVEAuthCookie="+token.Token)
+	if token.CsrfToken != "" {
+		req.Header.Set("CSRFPreventionToken", token.CsrfToken)
 	}
 
 	tr := &http.Transport{

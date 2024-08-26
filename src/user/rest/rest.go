@@ -15,6 +15,6 @@ func UserRoutes(r *gin.RouterGroup) {
 
 	r.POST("/signup", h.RegisterHandler)
 	r.POST("/login", h.LoginHandler)
-	r.POST("/refresh", h.RefreshHandler)
+	r.GET("/refresh", h.RefreshHandler)
 	// r.GET("/proxy", h.ProxyHandler)
 }

@@ -24,12 +24,66 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/proxmox/network": {
-            "post": {
-                "description": "Proxmox Node의 Network 리스트를 가져옵니다.",
-                "consumes": [
+        "/api/proxmox/iso": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKey": []
+                    }
+                ],
+                "description": "Proxmox Node의 ISO 이미지 리스트를 가져옵니다.",
+                "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "proxmox"
+                ],
+                "summary": "Proxmox ISO 이미지 리스트 가져오기",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Node 이름",
+                        "name": "node",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ISO 이미지 리스트",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "잘못된 요청입니다.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "서버 오류입니다.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/proxmox/network": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKey": []
+                    }
+                ],
+                "description": "Proxmox Node의 Network 리스트를 가져옵니다.",
                 "produces": [
                     "application/json"
                 ],
@@ -39,13 +93,11 @@ const docTemplate = `{
                 "summary": "Proxmox Network 리스트 가져오기",
                 "parameters": [
                     {
-                        "description": "Proxmox Request Body",
-                        "name": "ProxmoxRequestBody",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.ProxmoxRequestBody"
-                        }
+                        "type": "string",
+                        "description": "Node 이름",
+                        "name": "node",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -77,11 +129,13 @@ const docTemplate = `{
             }
         },
         "/api/proxmox/nodes": {
-            "post": {
-                "description": "Proxmox에서 Node 리스트를 가져옵니다.",
-                "consumes": [
-                    "application/json"
+            "get": {
+                "security": [
+                    {
+                        "ApiKey": []
+                    }
                 ],
+                "description": "Proxmox에서 Node 리스트를 가져옵니다.",
                 "produces": [
                     "application/json"
                 ],
@@ -89,17 +143,6 @@ const docTemplate = `{
                     "proxmox"
                 ],
                 "summary": "Proxmox Node 리스트 가져오기",
-                "parameters": [
-                    {
-                        "description": "Proxmox Credentials",
-                        "name": "ProxmoxCredentials",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.ProxmoxCredentials"
-                        }
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "Node 리스트",
@@ -113,8 +156,8 @@ const docTemplate = `{
                             }
                         }
                     },
-                    "400": {
-                        "description": "잘못된 요청입니다.",
+                    "401": {
+                        "description": "잘못된 토큰입니다.",
                         "schema": {
                             "type": "string"
                         }
@@ -172,11 +215,13 @@ const docTemplate = `{
             }
         },
         "/api/proxmox/storage": {
-            "post": {
-                "description": "Proxmox Node의 Storage 리스트를 가져옵니다.",
-                "consumes": [
-                    "application/json"
+            "get": {
+                "security": [
+                    {
+                        "ApiKey": []
+                    }
                 ],
+                "description": "Proxmox Node의 Storage 리스트를 가져옵니다.",
                 "produces": [
                     "application/json"
                 ],
@@ -186,13 +231,11 @@ const docTemplate = `{
                 "summary": "Proxmox Storage 리스트 가져오기",
                 "parameters": [
                     {
-                        "description": "Proxmox Request Body",
-                        "name": "ProxmoxRequestBody",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.ProxmoxRequestBody"
-                        }
+                        "type": "string",
+                        "description": "Node 이름",
+                        "name": "node",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -220,14 +263,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/proxmox/vm": {
+        "/api/proxmox/token": {
             "post": {
                 "security": [
                     {
                         "ApiKey": []
                     }
                 ],
-                "description": "Proxmox Node의 VM 리스트를 가져옵니다.",
+                "description": "Proxmox 인증 토큰을 생성합니다.",
                 "consumes": [
                     "application/json"
                 ],
@@ -237,7 +280,7 @@ const docTemplate = `{
                 "tags": [
                     "proxmox"
                 ],
-                "summary": "Proxmox VM 리스트 가져오기",
+                "summary": "Proxmox 인증 토큰 생성",
                 "parameters": [
                     {
                         "description": "Proxmox Credentials",
@@ -249,6 +292,43 @@ const docTemplate = `{
                         }
                     }
                 ],
+                "responses": {
+                    "200": {
+                        "description": "토큰 생성 성공 메시지",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "잘못된 요청입니다.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "서버 오류입니다.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/proxmox/vm": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKey": []
+                    }
+                ],
+                "description": "Proxmox Node의 VM 리스트를 가져옵니다.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "proxmox"
+                ],
+                "summary": "Proxmox VM 리스트 가져오기",
                 "responses": {
                     "200": {
                         "description": "VM 리스트",
@@ -337,7 +417,7 @@ const docTemplate = `{
             }
         },
         "/api/user/refresh": {
-            "post": {
+            "get": {
                 "description": "유효한 리프레시 토큰을 사용하여 새로운 액세스 토큰을 재발급합니다.",
                 "consumes": [
                     "application/json"
@@ -464,17 +544,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "userId": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.ProxmoxRequestBody": {
-            "type": "object",
-            "properties": {
-                "creds": {
-                    "$ref": "#/definitions/models.ProxmoxCredentials"
-                },
-                "node": {
                     "type": "string"
                 }
             }

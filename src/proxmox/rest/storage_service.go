@@ -7,11 +7,10 @@ import (
 	"strings"
 )
 
-func fetchStorage(req models.ProxmoxRequestBody) (*models.StorageList, error) {
-	var creds = req.Creds
-	url := fmt.Sprintf("https://%s:%s/api2/json/nodes/%s/storage", creds.Address, creds.Port, req.Node)
+func fetchStorage(node string, token models.ProxmoxToken, proxy models.Proxy) (*models.StorageList, error) {
+	url := fmt.Sprintf("https://%s:%s/api2/json/nodes/%s/storage", proxy.Address, proxy.Port, node)
 
-	storageData, err := fetchProxmoxDataForURL(req.Creds, url, "GET")
+	storageData, err := fetchProxmoxDataForURL(token, url, "GET")
 	if err != nil {
 		return nil, err
 	}
@@ -51,8 +50,8 @@ func fetchStorage(req models.ProxmoxRequestBody) (*models.StorageList, error) {
 	}, nil
 }
 
-func fetchIsos(req models.ProxmoxRequestBody) ([]map[string]interface{}, error) {
-	storageData, _ := fetchStorage(req)
+func fetchIsos(node string, token models.ProxmoxToken, proxy models.Proxy) ([]map[string]interface{}, error) {
+	storageData, _ := fetchStorage(node, token, proxy)
 
 	var isoData []map[string]interface{}
 	for _, storage := range storageData.IsoStorage {
@@ -61,7 +60,7 @@ func fetchIsos(req models.ProxmoxRequestBody) ([]map[string]interface{}, error) 
 			continue
 		}
 		storageName := storageMap["storage"].(string)
-		iso, err := fetchIso(req, storageName)
+		iso, err := fetchIso(node, storageName, token, proxy)
 		if err != nil {
 			log.Printf("Failed to fetch data for node %s: %v", storage, err)
 			continue
@@ -74,11 +73,11 @@ func fetchIsos(req models.ProxmoxRequestBody) ([]map[string]interface{}, error) 
 	return isoData, nil
 }
 
-func fetchIso(req models.ProxmoxRequestBody, storage string) ([]interface{}, error) {
-	var creds = req.Creds
-	url := fmt.Sprintf("https://%s:%s/api2/json/nodes/%s/storage/%s/content", creds.Address, creds.Port, req.Node, storage)
+func fetchIso(node string, storage string, token models.ProxmoxToken, proxy models.Proxy) ([]interface{}, error) {
 
-	isoData, err := fetchProxmoxDataForURL(req.Creds, url, "GET")
+	url := fmt.Sprintf("https://%s:%s/api2/json/nodes/%s/storage/%s/content", proxy.Address, proxy.Port, node, storage)
+
+	isoData, err := fetchProxmoxDataForURL(token, url, "GET")
 	if err != nil {
 		return nil, err
 	}

@@ -5,11 +5,10 @@ import (
 	"hyperdesk/proxmox/models"
 )
 
-func fetchNetworks(req models.ProxmoxRequestBody) ([]string, error) {
-	var creds = req.Creds
-	url := fmt.Sprintf("https://%s:%s/api2/json/nodes/%s/network", creds.Address, creds.Port, req.Node)
+func fetchNetworks(node string, token models.ProxmoxToken, proxy models.Proxy) ([]string, error) {
+	url := fmt.Sprintf("https://%s:%s/api2/json/nodes/%s/network", proxy.Address, proxy.Port, node)
 
-	netData, err := fetchProxmoxDataForURL(req.Creds, url, "GET")
+	netData, err := fetchProxmoxDataForURL(token, url, "GET")
 	if err != nil {
 		return nil, err
 	}

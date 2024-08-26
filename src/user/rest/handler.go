@@ -200,7 +200,7 @@ func (h *Handler) LoginHandler(c *gin.Context) {
 // @Failure 400 {object} string
 // @Failure 401 {object} string
 // @Failure 500 {object} string
-// @Router /api/user/refresh [post]
+// @Router /api/user/refresh [get]
 func (h *Handler) RefreshHandler(c *gin.Context) {
 	refreshToken, err := c.Cookie("refreshToken")
 	if err != nil {

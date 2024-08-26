@@ -14,6 +14,8 @@ import (
 func getProxmoxToken(creds models.ProxmoxCredentials) (string, string, error) {
 	url := fmt.Sprintf("https://%s:%s/api2/json/access/ticket", creds.Address, creds.Port)
 	data := fmt.Sprintf("username=%s&password=%s", creds.UserId+"@pam", creds.Password)
+	fmt.Println(url)
+	fmt.Println(data)
 	req, err := http.NewRequest("POST", url, strings.NewReader(data))
 	if err != nil {
 		return "", "", err

@@ -11,15 +11,15 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func fetchVMs(creds models.ProxmoxCredentials, userId string, h *Handler) ([]map[string]interface{}, error) {
-	nodes, err := fetchProxmoxNodes(creds)
+func fetchVMs(token models.ProxmoxToken, userId string, proxy models.Proxy, h *Handler) ([]map[string]interface{}, error) {
+	nodes, err := fetchProxmoxNodes(token, proxy)
 	if err != nil {
 		return nil, err
 	}
 
 	var allData []map[string]interface{}
 	for _, node := range nodes {
-		nodeData, err := fetchNodeVMsAndCTs(creds, node, userId, h)
+		nodeData, err := fetchNodeVMsAndCTs(token, node, userId, proxy, h)
 		if err != nil {
 			log.Printf("Failed to fetch data for node %s: %v", node, err)
 			continue
@@ -32,16 +32,16 @@ func fetchVMs(creds models.ProxmoxCredentials, userId string, h *Handler) ([]map
 	return allData, nil
 }
 
-func fetchNodeVMsAndCTs(creds models.ProxmoxCredentials, node string, userId string, h *Handler) (map[string]interface{}, error) {
-	vmURL := fmt.Sprintf("https://%s:%s/api2/json/nodes/%s/qemu", creds.Address, creds.Port, node)
-	ctURL := fmt.Sprintf("https://%s:%s/api2/json/nodes/%s/lxc", creds.Address, creds.Port, node)
+func fetchNodeVMsAndCTs(token models.ProxmoxToken, node string, userId string, proxy models.Proxy, h *Handler) (map[string]interface{}, error) {
+	vmURL := fmt.Sprintf("https://%s:%s/api2/json/nodes/%s/qemu", proxy.Address, proxy.Port, node)
+	ctURL := fmt.Sprintf("https://%s:%s/api2/json/nodes/%s/lxc", proxy.Address, proxy.Port, node)
 
-	vmData, err := fetchProxmoxDataForURL(creds, vmURL, "GET")
+	vmData, err := fetchProxmoxDataForURL(token, vmURL, "GET")
 	if err != nil {
 		return nil, err
 	}
 
-	ctData, err := fetchProxmoxDataForURL(creds, ctURL, "GET")
+	ctData, err := fetchProxmoxDataForURL(token, ctURL, "GET")
 	if err != nil {
 		return nil, err
 	}

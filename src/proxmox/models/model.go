@@ -10,6 +10,11 @@ type ProxmoxCredentials struct {
 	Password string `json:"password"`
 }
 
+type ProxmoxToken struct {
+	Token     string
+	CsrfToken string
+}
+
 // Proxy는 사용자와 관련된 프록시 정보를 정의합니다.
 type Proxy struct {
 	UserId  string `json:"userId" bson:"userId"`
@@ -32,4 +37,9 @@ type VM struct {
 	Name     string `json:"name" bson:"name"`
 	VMId     string `json:"vmid" bson:"vmid"`
 	UniqueId string `json:"uniqueId" bson:"uniqueId"`
+}
+
+type StorageList struct {
+	DiskStorage []interface{} `json:"diskStorage"`
+	IsoStorage  []interface{} `json:"isoStorage"`
 }

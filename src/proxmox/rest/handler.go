@@ -81,7 +81,7 @@ func (h *Handler) TokenHandler(c *gin.Context) {
 
 	token, csrfToken, err := getProxmoxToken(creds)
 
-	if err != nil {
+	if err != nil || token == "" || csrfToken == "" {
 		log.Printf("Failed to get Proxmox token: %v", err)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Proxmox 인증 실패했습니다."})
 		return

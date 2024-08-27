@@ -87,6 +87,7 @@ func (h *Handler) TokenHandler(c *gin.Context) {
 		return
 	}
 
+	c.SetSameSite(http.SameSiteNoneMode)
 	c.SetCookie(
 		"token",                         // 쿠키 이름
 		token,                           // 쿠키 값

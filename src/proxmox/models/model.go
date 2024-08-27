@@ -17,9 +17,10 @@ type ProxmoxToken struct {
 
 // Proxy는 사용자와 관련된 프록시 정보를 정의합니다.
 type Proxy struct {
-	UserId  string `json:"userId" bson:"userId"`
-	Address string `json:"address" bson:"address"`
-	Port    string `json:"port" bson:"port"`
+	UserId    string `json:"userId" bson:"userId"`
+	Address   string `json:"address" bson:"address"`
+	Port      string `json:"port" bson:"port"`
+	ProxmoxId string `json:"proxmoxId" bson:"proxmoxId"`
 }
 
 // TokenClaims는 JWT 토큰의 클레임을 정의합니다.

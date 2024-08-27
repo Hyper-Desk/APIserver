@@ -6,10 +6,11 @@ import (
 
 	"hyperdesk/database"
 	"hyperdesk/proxmox/models"
+
+	"github.com/go-errors/errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"github.com/go-errors/errors"
 )
 
 type ORM struct {
@@ -41,8 +42,9 @@ func (orm *ORM) InsertProxy(proxy models.Proxy) (*mongo.UpdateResult, error) {
 	filter := bson.M{"userId": proxy.UserId}
 	update := bson.M{
 		"$set": bson.M{
-			"address": proxy.Address,
-			"port":    proxy.Port,
+			"address":   proxy.Address,
+			"port":      proxy.Port,
+			"proxmoxId": proxy.ProxmoxId,
 		},
 	}
 

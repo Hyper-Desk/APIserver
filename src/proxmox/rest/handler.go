@@ -67,9 +67,10 @@ func (h *Handler) TokenHandler(c *gin.Context) {
 	}
 
 	proxy := models.Proxy{
-		UserId:  userId,
-		Address: creds.Address,
-		Port:    creds.Port,
+		UserId:    userId,
+		Address:   creds.Address,
+		Port:      creds.Port,
+		ProxmoxId: creds.UserId,
 	}
 
 	_, err = h.proxmoxdbLayer.InsertProxy(proxy)
